@@ -2,7 +2,7 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:security="http://www.springframework.org/schema/security"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.springframework.org/schema/beans
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
           http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
           http://www.springframework.org/schema/security
           http://www.springframework.org/schema/security/spring-security-4.0.xsd">
@@ -11,34 +11,133 @@
         <security:authentication-provider ref="clientProvider" />
     </security:authentication-manager>
 
-	<!-- urls and security configuration -->
+    <!-- urls and security configuration -->
+    <security:http create-session="always" pattern="/facebook/**" entry-point-ref="facebookEntryPoint">
+        <security:request-cache ref="httpSessionRequestCache"/>
+        <security:intercept-url pattern="/facebook/**" access="isAuthenticated()" />
+    </security:http>
+
+    <security:http pattern="/twitter/**" entry-point-ref="twitterEntryPoint">
+        <security:intercept-url pattern="/twitter/**" access="isAuthenticated()" />
+    </security:http>
+
     <security:http pattern="/google/**" entry-point-ref="googleEntryPoint">
         <security:intercept-url pattern="/google/**" access="isAuthenticated()" />
     </security:http>
 
+    <security:http pattern="/form/**" entry-point-ref="formEntryPoint">
+        <security:intercept-url pattern="/form/**" access="isAuthenticated()" />
+    </security:http>
+
+    <security:http pattern="/basicauth/**" entry-point-ref="basicAuthEntryPoint">
+        <security:intercept-url pattern="/basicauth/**" access="isAuthenticated()" />
+    </security:http>
+
+    <security:http pattern="/saml/**" entry-point-ref="samlEntryPoint">
+        <security:headers disabled="true" />
+        <security:intercept-url pattern="/saml/**" access="isAuthenticated()" />
+    </security:http>
+
+    <security:http pattern="/**" entry-point-ref="casEntryPoint">
+        <security:csrf disabled="true"/>
+        <security:headers disabled="true" />
+        <security:custom-filter after="CAS_FILTER" ref="clientFilter" />
+        <security:intercept-url pattern="/cas/restricted.jsp" access="hasRole('ADMIN')" />
+        <security:intercept-url pattern="/cas/**" access="isAuthenticated()" />
+        <security:intercept-url pattern="/**" access="permitAll()" />
+        <security:logout logout-success-url="/" />
+    </security:http>
+
+    <!-- entry points -->
+    <bean id="facebookEntryPoint" class="org.pac4j.springframework.security.web.ClientAuthenticationEntryPoint">
+        <property name="client" ref="facebookClient" />
+    </bean>
 
     <bean id="googleEntryPoint" class="org.pac4j.springframework.security.web.ClientAuthenticationEntryPoint">
         <property name="client" ref="googleClient" />
     </bean>
 
+    <bean id="twitterEntryPoint" class="org.pac4j.springframework.security.web.ClientAuthenticationEntryPoint">
+        <property name="client" ref="twitterClient" />
+    </bean>
 
-	<!-- clients definition -->
+    <bean id="formEntryPoint" class="org.pac4j.springframework.security.web.ClientAuthenticationEntryPoint">
+        <property name="client" ref="formClient" />
+    </bean>
+
+    <bean id="basicAuthEntryPoint" class="org.pac4j.springframework.security.web.ClientAuthenticationEntryPoint">
+        <property name="client" ref="basicAuthClient" />
+    </bean>
+
+    <bean id="casEntryPoint" class="org.pac4j.springframework.security.web.ClientAuthenticationEntryPoint">
+        <property name="client" ref="casClient" />
+    </bean>
+
+    <bean id="samlEntryPoint" class="org.pac4j.springframework.security.web.ClientAuthenticationEntryPoint">
+        <property name="client" ref="samlClient" />
+    </bean>
+
+    <!-- clients definition -->
     <bean id="googleClient" class="org.pac4j.oauth.client.Google2Client">
         <property name="key" value="51314467055-l09m0rj4q794un2kqpgm5r6esjtcci24.apps.googleusercontent.com" />
         <property name="secret" value="uBTofxvIhVtwlcBnb2j4pdsi" />
     </bean>
 
+    <bean id="facebookClient" class="org.pac4j.oauth.client.FacebookClient">
+        <property name="key" value="145278422258960" />
+        <property name="secret" value="be21409ba8f39b5dae2a7de525484da8" />
+    </bean>
+
+    <bean id="twitterClient" class="org.pac4j.oauth.client.TwitterClient">
+        <property name="key" value="CoxUiYwQOSFDReZYdjigBA" />
+        <property name="secret" value="2kAzunH5Btc4gRSaMr7D7MkyoJ5u1VzbOOzE8rBofs" />
+    </bean>
+
+    <bean id="usernamePasswordAuthenticator" class="org.pac4j.http.credentials.authenticator.test.SimpleTestUsernamePasswordAuthenticator" />
+
+    <bean id="formClient" class="org.pac4j.http.client.indirect.FormClient">
+        <property name="loginUrl" value="http://localhost:8080/loginForm.jsp" />
+        <property name="authenticator" ref="usernamePasswordAuthenticator" />
+    </bean>
+
+    <bean id="basicAuthClient" class="org.pac4j.http.client.indirect.IndirectBasicAuthClient">
+        <property name="authenticator" ref="usernamePasswordAuthenticator" />
+    </bean>
+
+    <bean id="samlConfig" class="org.pac4j.saml.client.SAML2ClientConfiguration">
+        <property name="keystorePath" value="resource:samlKeystore.jks" />
+        <property name="keystorePassword" value="pac4j-demo-passwd" />
+        <property name="privateKeyPassword" value="pac4j-demo-passwd" />
+        <property name="identityProviderMetadataPath" value="resource:metadata-okta.xml" />
+        <property name="maximumAuthenticationLifetime" value="3600" />
+        <property name="serviceProviderEntityId" value="http://localhost:8080/callback?client_name=SAML2Client" />
+        <property name="serviceProviderMetadataPath" value="sp-metadata.xml" />
+    </bean>
+
+    <bean id="samlClient" class="org.pac4j.saml.client.SAML2Client">
+        <constructor-arg name="configuration" ref="samlConfig" />
+    </bean>
+
+    <bean id="casClient" class="org.pac4j.cas.client.CasClient">
+        <property name="casLoginUrl" value="https://casserverpac4j.herokuapp.com/login" />
+    </bean>
 
     <bean id="clients" class="org.pac4j.core.client.Clients">
-        <property name="callbackUrl" value="http://localhost:8080/callback" />
+        <property name="callbackUrl" value="http://honhon.herokuapp.com/callback" />
         <property name="clients">
-        	<list>
-        		<ref bean="googleClient" />
-        	</list>
+            <list>
+                <ref bean="facebookClient" />
+                <ref bean="twitterClient" />
+                <ref bean="googleClient" />
+                <ref bean="formClient" />
+                <ref bean="basicAuthClient" />
+                <ref bean="casClient" />
+                <ref bean="samlClient" />
+            </list>
         </property>
     </bean>
 
-	<!-- common to all clients -->
+    <!-- common to all clients -->
     <bean id="clientFilter" class="org.pac4j.springframework.security.web.ClientAuthenticationFilter">
         <property name="clients" ref="clients" />
         <property name="sessionAuthenticationStrategy" ref="sas" />

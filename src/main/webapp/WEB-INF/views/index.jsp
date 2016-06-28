@@ -51,7 +51,7 @@
                     
                     <div class="panel" id="Log in">
                         <h1>Log in</h1>
-                        <a href="google/index.jsp">Protected url by Google : google/index.jsp</a> (use a real account)<br />
+                        <a href="google/index.jsp">Zaloguj sie przez Google</a><br />
                         <br /><br />
                         <%Authentication auth = (Authentication) SecurityContextHolder.getContext().getAuthentication();
                             UserProfile profile = null;
